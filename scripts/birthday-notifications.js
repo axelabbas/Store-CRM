@@ -63,18 +63,47 @@ async function checkBirthdaysAndNotify() {
     
     // Check for birthdays today
     const birthdaysToday = customers.filter(customer => {
+      if (!customer.birthday) return false;
+      
+      // Handle both ISO datetime strings and YYYY-MM-DD date strings
       const birthday = new Date(customer.birthday);
-      const birthMonth = birthday.getMonth() + 1;
-      const birthDay = birthday.getDate();
+      
+      // For ISO strings with time, use UTC date components
+      // For YYYY-MM-DD strings, use local date components
+      let birthMonth, birthDay;
+      
+      if (customer.birthday.includes('T')) {
+        // ISO datetime string - use UTC to avoid timezone issues
+        birthMonth = birthday.getUTCMonth() + 1;
+        birthDay = birthday.getUTCDate();
+      } else {
+        // YYYY-MM-DD format - use local date
+        birthMonth = birthday.getMonth() + 1;
+        birthDay = birthday.getDate();
+      }
+      
       console.log(`Checking ${customer.fullName}: ${birthMonth}-${birthDay} vs today ${todayMonth}-${todayDay}`);
       return birthMonth === todayMonth && birthDay === todayDay;
     });
     
     // Check for birthdays in 2 days
     const birthdaysInTwoDays = customers.filter(customer => {
+      if (!customer.birthday) return false;
+      
       const birthday = new Date(customer.birthday);
-      const birthMonth = birthday.getMonth() + 1;
-      const birthDay = birthday.getDate();
+      
+      let birthMonth, birthDay;
+      
+      if (customer.birthday.includes('T')) {
+        // ISO datetime string - use UTC to avoid timezone issues
+        birthMonth = birthday.getUTCMonth() + 1;
+        birthDay = birthday.getUTCDate();
+      } else {
+        // YYYY-MM-DD format - use local date
+        birthMonth = birthday.getMonth() + 1;
+        birthDay = birthday.getDate();
+      }
+      
       return birthMonth === twoDaysMonth && birthDay === twoDaysDay;
     });
     

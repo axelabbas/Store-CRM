@@ -62,9 +62,15 @@ export const AddCustomerPage: React.FC = () => {
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
+      // Store birthday as YYYY-MM-DD format to avoid timezone issues
+      const year = data.birthday.getFullYear();
+      const month = String(data.birthday.getMonth() + 1).padStart(2, '0');
+      const day = String(data.birthday.getDate()).padStart(2, '0');
+      const birthdayString = `${year}-${month}-${day}`;
+      
       const customerData = {
         ...data,
-        birthday: data.birthday.toISOString(),
+        birthday: birthdayString,
         createdAt: serverTimestamp(),
       };
 
