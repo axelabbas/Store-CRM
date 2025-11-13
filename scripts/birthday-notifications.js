@@ -53,11 +53,20 @@ async function checkBirthdaysAndNotify() {
     
     console.log(`Found ${customers.length} total customers`);
     
+    // Debug: Log customer birthday data
+    customers.forEach(customer => {
+      if (customer.birthday) {
+        const birthday = new Date(customer.birthday);
+        console.log(`Customer: ${customer.fullName}, Birthday: ${customer.birthday}, Parsed: ${birthday.getMonth() + 1}-${birthday.getDate()}`);
+      }
+    });
+    
     // Check for birthdays today
     const birthdaysToday = customers.filter(customer => {
       const birthday = new Date(customer.birthday);
       const birthMonth = birthday.getMonth() + 1;
       const birthDay = birthday.getDate();
+      console.log(`Checking ${customer.fullName}: ${birthMonth}-${birthDay} vs today ${todayMonth}-${todayDay}`);
       return birthMonth === todayMonth && birthDay === todayDay;
     });
     
