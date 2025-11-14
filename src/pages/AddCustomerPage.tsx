@@ -4,12 +4,27 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { customerSchema, CustomerFormData } from '../types/customer';
-import { Calendar, User, AtSign, Phone, Mail, FileText, Save, X } from 'lucide-react';
-import { format, parse } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { DynamicInput } from '@/components/ui/dynamic-input';
+import { DynamicTextarea } from '@/components/ui/dynamic-textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { handleError } from '../lib/errorHandling';
+import { t } from '../lib/translations';
 
 export const AddCustomerPage: React.FC = () => {
   const [dateInput, setDateInput] = useState('');
-  
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const {
     register,
     handleSubmit,
@@ -35,226 +50,264 @@ export const AddCustomerPage: React.FC = () => {
     if (!dateString) return null;
     const parts = dateString.split('/');
     if (parts.length !== 3) return null;
-    
+
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-indexed
     const year = parseInt(parts[2], 10);
-    
+
     if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
     if (day < 1 || day > 31) return null;
     if (month < 0 || month > 11) return null;
     if (year < 1900 || year > new Date().getFullYear()) return null;
-    
+
     return new Date(year, month, day);
   };
 
   const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setDateInput(value);
-    
-    const parsedDate = parseDateFromInput(value);
+
+    // Remove all non-digit characters except /
+    const digitsOnly = value.replace(/[^\d]/g, '');
+
+    // Auto-format as DD/MM/YYYY
+    let formatted = '';
+
+    if (digitsOnly.length > 0) {
+      // Add day (max 2 digits)
+      formatted = digitsOnly.substring(0, 2);
+
+      if (digitsOnly.length > 2) {
+        // Add slash and month
+        formatted += '/' + digitsOnly.substring(2, 4);
+
+        if (digitsOnly.length > 4) {
+          // Add slash and year
+          formatted += '/' + digitsOnly.substring(4, 8);
+        }
+      }
+    }
+
+    setDateInput(formatted);
+
+    const parsedDate = parseDateFromInput(formatted);
     if (parsedDate) {
       setValue('birthday', parsedDate, { shouldValidate: true });
     } else {
-      setValue('birthday', null as any, { shouldValidate: true });
+      setValue('birthday', null as unknown as Date, { shouldValidate: true });
+    }
+  };
+
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (date) {
+      setValue('birthday', date, { shouldValidate: true });
+      setDateInput(formatDateForInput(date));
+      setIsCalendarOpen(false);
     }
   };
 
   const onSubmit = async (data: CustomerFormData) => {
+    setSubmitError('');
+    setSuccessMessage('');
+
     try {
+      // Validate user is authenticated
+      if (!user) {
+        setSubmitError('You must be logged in to add customers.');
+        return;
+      }
+
       // Store birthday as YYYY-MM-DD format to avoid timezone issues
       const year = data.birthday.getFullYear();
       const month = String(data.birthday.getMonth() + 1).padStart(2, '0');
       const day = String(data.birthday.getDate()).padStart(2, '0');
       const birthdayString = `${year}-${month}-${day}`;
-      
+
+      const now = new Date().toISOString();
+
       const customerData = {
         ...data,
         birthday: birthdayString,
         createdAt: serverTimestamp(),
+        createdBy: {
+          email: user.email || 'unknown',
+          uid: user.uid,
+        },
+        history: [
+          {
+            timestamp: now,
+            adminEmail: user.email || 'unknown',
+            adminUid: user.uid,
+            action: 'created' as const,
+          },
+        ],
       };
 
       await addDoc(collection(db, 'customers'), customerData);
-      
-      // Show success message or redirect
-      alert('Customer added successfully!');
-      reset();
+
+      setSuccessMessage('Customer added successfully!');
+
+      // Reset form and navigate after a brief delay
+      setTimeout(() => {
+        reset();
+        setDateInput('');
+        navigate('/customers');
+      }, 1000);
     } catch (error) {
-      console.error('Error adding customer:', error);
-      alert('Failed to add customer. Please try again.');
+      const errorDetails = handleError(error);
+      setSubmitError(errorDetails.message);
     }
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const date = new Date(e.target.value);
-    setValue('birthday', date, { shouldValidate: true });
-  };
-
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Add New Customer</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Fill in the customer information below to add them to your CRM.
-          </p>
-        </div>
+    <div className="max-w-3xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('Add New Customer')}</CardTitle>
+          <CardDescription>
+            {t('Fill in the customer information below')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {submitError && (
+              <div className="p-3 text-sm bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <span className="text-destructive">{submitError}</span>
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                Full Name *
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
+            {successMessage && (
+              <div className="p-3 text-sm bg-green-50 border border-green-200 rounded-md flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <span className="text-green-600">{successMessage}</span>
+              </div>
+            )}
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">{t('Full Name')} *</Label>
+                <DynamicInput
                   id="fullName"
+                  placeholder={t('Full Name Placeholder')}
                   {...register('fullName')}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Jane Doe"
                 />
+                {errors.fullName && (
+                  <p className="text-sm text-destructive">{errors.fullName.message}</p>
+                )}
               </div>
-              {errors.fullName && (
-                <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
-              )}
-            </div>
 
-            <div>
-              <label htmlFor="instagramHandle" className="block text-sm font-medium text-gray-700">
-                Instagram Handle *
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <AtSign className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
+              <div className="space-y-2">
+                <Label htmlFor="instagramHandle">{t('Instagram Handle')} *</Label>
+                <DynamicInput
                   id="instagramHandle"
+                  placeholder={t('Instagram Handle Placeholder')}
                   {...register('instagramHandle')}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="janedoe99"
                 />
+                {errors.instagramHandle && (
+                  <p className="text-sm text-destructive">{errors.instagramHandle.message}</p>
+                )}
               </div>
-              {errors.instagramHandle && (
-                <p className="mt-1 text-sm text-red-600">{errors.instagramHandle.message}</p>
-              )}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="birthday" className="block text-sm font-medium text-gray-700">
-                Birthday *
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Calendar className="h-5 w-5 text-gray-400" />
+              <div className="space-y-2">
+                <Label htmlFor="birthday">{t('Birthday')} *</Label>
+                <div className="flex gap-2">
+                  <DynamicInput
+                    id="birthday"
+                    placeholder="DD/MM/YYYY"
+                    value={dateInput}
+                    onChange={handleDateInputChange}
+                    maxLength={10}
+                    className="flex-1"
+                  />
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="px-3"
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={birthday}
+                        onSelect={handleCalendarSelect}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date('1900-01-01')
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                <input
-                  type="text"
-                  id="birthday"
-                  value={formatDateForInput(birthday) || dateInput}
-                  onChange={handleDateInputChange}
-                  placeholder="DD/MM/YYYY"
-                  pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])/(19|20)\d\d"
-                  title="Please enter date in DD/MM/YYYY format (e.g., 25/12/1995)"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                {errors.birthday && (
+                  <p className="text-sm text-destructive">{errors.birthday.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t('Type or click calendar')}
+                </p>
               </div>
-              {errors.birthday && (
-                <p className="mt-1 text-sm text-red-600">{errors.birthday.message}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">Format: DD/MM/YYYY (e.g., 25/12/1995)</p>
-            </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Phone Number
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="tel"
+              <div className="space-y-2">
+                <Label htmlFor="phone">{t('Phone Number')}</Label>
+                <DynamicInput
                   id="phone"
+                  type="tel"
+                  placeholder={t('Phone Placeholder')}
                   {...register('phone')}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="+1234567890"
                 />
+                {errors.phone && (
+                  <p className="text-sm text-destructive">{errors.phone.message}</p>
+                )}
               </div>
-              {errors.phone && (
-                <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-              )}
-            </div>
-          </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email Address
-            </label>
-            <div className="mt-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="email">{t('Email Address')}</Label>
+                <DynamicInput
+                  id="email"
+                  type="email"
+                  placeholder={t('Email Placeholder')}
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
               </div>
-              <input
-                type="email"
-                id="email"
-                {...register('email')}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="jane@example.com"
-              />
-            </div>
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-            )}
-          </div>
 
-          <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-              Notes
-            </label>
-            <div className="mt-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-start pt-2 pointer-events-none">
-                <FileText className="h-5 w-5 text-gray-400" />
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="notes">{t('Notes')}</Label>
+                <DynamicTextarea
+                  id="notes"
+                  rows={4}
+                  placeholder={t('Notes Placeholder')}
+                  {...register('notes')}
+                />
+                {errors.notes && (
+                  <p className="text-sm text-destructive">{errors.notes.message}</p>
+                )}
               </div>
-              <textarea
-                id="notes"
-                rows={4}
-                {...register('notes')}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Contacted via DM on 11/13/2025. Interested in product X."
-              />
             </div>
-            {errors.notes && (
-              <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
-            )}
-          </div>
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => reset()}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Clear
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {isSubmitting ? 'Saving...' : 'Save Customer'}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { reset(); setDateInput(''); }}
+              >
+                {t('Clear')}
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? t('Saving') : t('Save Customer')}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
