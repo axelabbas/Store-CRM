@@ -154,6 +154,16 @@ export const translations = {
   'Export': 'تصدير',
   'No customers to export': 'لا يوجد عملاء للتصدير',
   'Customers exported successfully!': 'تم تصدير العملاء بنجاح!',
+  
+  // Filters
+  'Filter by Admin': 'تصفية حسب المسؤول',
+  'All Admins': 'جميع المسؤولين',
+  'Filter by Birthday': 'تصفية حسب تاريخ الميلاد',
+  'All Birthdays': 'جميع التواريخ',
+  'Birthday Today': 'عيد الميلاد اليوم',
+  'Birthday This Month': 'عيد الميلاد هذا الشهر',
+  'Filters': 'التصفية',
+  'Clear Filters': 'مسح التصفية',
 };
 
 export type TranslationKey = keyof typeof translations;

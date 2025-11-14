@@ -36,6 +36,8 @@ export const CustomerListPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterAdmin, setFilterAdmin] = useState<string>('all');
+  const [filterBirthday, setFilterBirthday] = useState<'all' | 'today' | 'thisMonth'>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -80,12 +82,59 @@ export const CustomerListPage: React.FC = () => {
   }, []);
 
   const filteredCustomers = customers.filter((customer) => {
+    // Search filter
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = 
       customer.fullName.toLowerCase().includes(searchLower) ||
-      customer.instagramHandle.toLowerCase().includes(searchLower)
-    );
+      customer.instagramHandle.toLowerCase().includes(searchLower);
+    
+    if (!matchesSearch) return false;
+
+    // Admin filter
+    if (filterAdmin !== 'all') {
+      if (!customer.createdBy || customer.createdBy.email !== filterAdmin) {
+        return false;
+      }
+    }
+
+    // Birthday filter
+    if (filterBirthday !== 'all') {
+      try {
+        const birthday = typeof customer.birthday === 'string' 
+          ? parseISO(customer.birthday) 
+          : customer.birthday;
+        
+        const today = new Date();
+        const birthdayMonth = birthday.getMonth();
+        const birthdayDay = birthday.getDate();
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+
+        if (filterBirthday === 'today') {
+          if (birthdayMonth !== currentMonth || birthdayDay !== currentDay) {
+            return false;
+          }
+        } else if (filterBirthday === 'thisMonth') {
+          if (birthdayMonth !== currentMonth) {
+            return false;
+          }
+        }
+      } catch {
+        return false;
+      }
+    }
+
+    return true;
   });
+
+  // Get unique admins for filter dropdown
+  const uniqueAdmins = Array.from(
+    new Set(
+      customers
+        .map(c => c.createdBy?.email)
+        .filter((email): email is string => !!email)
+    )
+  ).sort();
 
   const formatBirthday = (birthday: string | Date) => {
     try {
@@ -346,7 +395,7 @@ export const CustomerListPage: React.FC = () => {
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
           <DynamicInput
@@ -357,9 +406,52 @@ export const CustomerListPage: React.FC = () => {
             className="pr-9"
           />
         </div>
+        
+        {/* Admin Filter */}
+        <select
+          value={filterAdmin}
+          onChange={(e) => setFilterAdmin(e.target.value)}
+          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          dir="rtl"
+        >
+          <option value="all">{t('All Admins')}</option>
+          {uniqueAdmins.map((admin) => (
+            <option key={admin} value={admin}>
+              {admin}
+            </option>
+          ))}
+        </select>
+
+        {/* Birthday Filter */}
+        <select
+          value={filterBirthday}
+          onChange={(e) => setFilterBirthday(e.target.value as 'all' | 'today' | 'thisMonth')}
+          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          dir="rtl"
+        >
+          <option value="all">{t('All Birthdays')}</option>
+          <option value="today">{t('Birthday Today')}</option>
+          <option value="thisMonth">{t('Birthday This Month')}</option>
+        </select>
+
+        {/* Clear Filters Button */}
+        {(filterAdmin !== 'all' || filterBirthday !== 'all') && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFilterAdmin('all');
+              setFilterBirthday('all');
+            }}
+          >
+            {t('Clear Filters')}
+          </Button>
+        )}
+
         <div className="text-sm text-muted-foreground">
           {filteredCustomers.length} {t('of')} {customers.length} {t('customers')}
         </div>
+        
         <Button
           variant="outline"
           size="sm"
