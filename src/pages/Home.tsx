@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Users, UserPlus, Calendar, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, Calendar, TrendingUp, Cake, Edit, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { t } from '../lib/translations';
@@ -11,6 +11,11 @@ interface Stats {
   totalCustomers: number;
   upcomingBirthdays: number;
   recentCustomers: number;
+  birthdaysToday: number;
+  birthdaysThisMonth: number;
+  totalEdits: number;
+  customersWithEmail: number;
+  customersWithPhone: number;
 }
 
 export default function Home() {
@@ -18,6 +23,11 @@ export default function Home() {
     totalCustomers: 0,
     upcomingBirthdays: 0,
     recentCustomers: 0,
+    birthdaysToday: 0,
+    birthdaysThisMonth: 0,
+    totalEdits: 0,
+    customersWithEmail: 0,
+    customersWithPhone: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +43,16 @@ export default function Home() {
         thirtyDaysFromNow.setDate(now.getDate() + 30);
 
         let upcomingBirthdays = 0;
+        let birthdaysToday = 0;
+        let birthdaysThisMonth = 0;
+        let totalEdits = 0;
+        let customersWithEmail = 0;
+        let customersWithPhone = 0;
+
         customersSnapshot.forEach((doc) => {
           const data = doc.data();
+
+          // Birthday calculations
           if (data.birthday) {
             const birthday = new Date(data.birthday);
             const thisYearBirthday = new Date(
@@ -42,10 +60,34 @@ export default function Home() {
               birthday.getMonth(),
               birthday.getDate()
             );
+
+            // Upcoming birthdays (next 30 days)
             if (thisYearBirthday >= now && thisYearBirthday <= thirtyDaysFromNow) {
               upcomingBirthdays++;
             }
+
+            // Birthdays today
+            if (
+              thisYearBirthday.getDate() === now.getDate() &&
+              thisYearBirthday.getMonth() === now.getMonth()
+            ) {
+              birthdaysToday++;
+            }
+
+            // Birthdays this month
+            if (thisYearBirthday.getMonth() === now.getMonth()) {
+              birthdaysThisMonth++;
+            }
           }
+
+          // Count edits
+          if (data.history && Array.isArray(data.history)) {
+            totalEdits += data.history.filter((h: { action?: string }) => h.action === 'edited').length;
+          }
+
+          // Count customers with contact info
+          if (data.email) customersWithEmail++;
+          if (data.phone) customersWithPhone++;
         });
 
         // Get recent customers (last 7 days)
@@ -67,6 +109,11 @@ export default function Home() {
           totalCustomers,
           upcomingBirthdays,
           recentCustomers,
+          birthdaysToday,
+          birthdaysThisMonth,
+          totalEdits,
+          customersWithEmail,
+          customersWithPhone,
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -104,8 +151,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* Stats Section - Row 1 */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('Total Customers')}</CardTitle>
@@ -123,19 +170,37 @@ export default function Home() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('Upcoming Birthdays')}</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">{t('Customers with Email')}</CardTitle>
+            <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? '...' : stats.upcomingBirthdays}
+              {loading ? '...' : stats.customersWithEmail}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('In the next 30 days')}
+              {t('Have email addresses')}
             </p>
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('Customers with Phone')}</CardTitle>
+            <Phone className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.customersWithPhone}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('Have phone numbers')}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stats Section - Row 2 */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('New This Week')}</CardTitle>
@@ -147,6 +212,51 @@ export default function Home() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {t('Added in the last 7 days')}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('Total Edits')}</CardTitle>
+            <Edit className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.totalEdits}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('Customer record updates')}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('Birthdays This Month')}</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.birthdaysThisMonth}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('In the current month')}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{t('Birthdays Today')}</CardTitle>
+            <Cake className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.birthdaysToday}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('Celebrating today')}
             </p>
           </CardContent>
         </Card>

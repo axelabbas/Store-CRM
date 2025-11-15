@@ -32,6 +32,16 @@ export const translations = {
   'In the next 30 days': 'في الـ 30 يومًا القادمة',
   'New This Week': 'جديد هذا الأسبوع',
   'Added in the last 7 days': 'تمت الإضافة في آخر 7 أيام',
+  'Birthdays Today': 'أعياد الميلاد اليوم',
+  'Celebrating today': 'يحتفلون اليوم',
+  'Birthdays This Month': 'أعياد الميلاد هذا الشهر',
+  'In the current month': 'في الشهر الحالي',
+  'Total Edits': 'إجمالي التعديلات',
+  'Customer record updates': 'تحديثات سجلات العملاء',
+  'Customers with Email': 'العملاء مع البريد الإلكتروني',
+  'Have email addresses': 'لديهم عناوين بريد إلكتروني',
+  'Customers with Phone': 'العملاء مع الهاتف',
+  'Have phone numbers': 'لديهم أرقام هواتف',
   'Ready to grow your business?': 'هل أنت مستعد لتنمية عملك؟',
   'Start building meaningful relationships with your customers today': 'ابدأ ببناء علاقات هادفة مع عملائك اليوم',
   'Add Your First Customer': 'أضف أول عميل لك',
@@ -164,6 +174,19 @@ export const translations = {
   'Birthday This Month': 'عيد الميلاد هذا الشهر',
   'Filters': 'التصفية',
   'Clear Filters': 'مسح التصفية',
+  
+  // Add Customer Side Panel
+  'Build stronger relationships by keeping track of your customers. Every detail matters.': 'بناء علاقات أقوى من خلال تتبع عملائك. كل التفاصيل مهمة.',
+  'Quick & Easy': 'سريع وسهل',
+  'Simple form, powerful results': 'نموذج بسيط، نتائج قوية',
+  'Stay Organized': 'ابقَ منظماً',
+  'All information in one place': 'جميع المعلومات في مكان واحد',
+  'Never Forget': 'لا تنسى أبداً',
+  'Birthday reminders and more': 'تذكيرات بأعياد الميلاد والمزيد',
+  
+  // Theme Toggle
+  'Switch to Light Mode': 'التبديل إلى الوضع النهاري',
+  'Switch to Dark Mode': 'التبديل إلى الوضع الليلي',
 };
 
 export type TranslationKey = keyof typeof translations;

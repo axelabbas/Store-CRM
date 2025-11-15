@@ -19,8 +19,7 @@ html {
 }
 
 body {
-  background-color: #ffffff;
-  color: #000000;
+  background-color: transparent;
   direction: rtl;
 }
 
@@ -91,4 +90,40 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Card transparency for background visibility */
+@layer components {
+  .card {
+    background-color: hsl(var(--card) / 0.85);
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* Custom Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-5deg);
+  }
+  75% {
+    transform: translateY(-30px) rotate(3deg);
+  }
+}
+
+.animate-float {
+  animation: float 7s ease-in-out infinite;
+}
+
+/* Grid Pattern */
+.bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgb(0 0 0 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
 }

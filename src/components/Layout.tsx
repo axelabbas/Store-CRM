@@ -1,17 +1,20 @@
 import React from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from '@/components/ui/button';
 import { t } from '../lib/translations';
+import SmoothWavyCanvas from '@/components/ui/smooth-wavy-canvas';
+import { useTheme } from '../hooks/useTheme';
+import { Moon, Sun, Home, Users, UserPlus, LogOut } from 'lucide-react';
+import Dock from '@/components/ui/Dock';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = async () => {
     try {
@@ -22,61 +25,60 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const dockItems = [
+    {
+      icon: <Home size={20} />,
+      label: t('Home'),
+      onClick: () => navigate('/')
+    },
+    {
+      icon: <Users size={20} />,
+      label: t('Customers'),
+      onClick: () => navigate('/customers')
+    },
+    {
+      icon: <UserPlus size={20} />,
+      label: t('Add Customer'),
+      onClick: () => navigate('/add-customer')
+    },
+    {
+      icon: isDark ? <Sun size={20} /> : <Moon size={20} />,
+      label: isDark ? t('Switch to Light Mode') : t('Switch to Dark Mode'),
+      onClick: toggleTheme
+    },
+    {
+      icon: <LogOut size={20} />,
+      label: t('Logout'),
+      onClick: handleLogout
+    },
+  ];
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container max-w-7xl mx-auto flex h-16 items-center justify-between px-4">
-          {/* Logo/Title - Right side in RTL */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-bold text-lg">{t('CRM System')}</span>
-          </Link>
+    <div className="min-h-screen relative pb-24">
+      {/* Animated Background */}
+      <div className="fixed inset-0 z-0">
+        <SmoothWavyCanvas
+          backgroundColor={isDark ? "#0a0a0a" : "#ffffff"}
+          primaryColor={isDark ? "120, 120, 120" : "140, 140, 140"}
+          secondaryColor={isDark ? "140, 140, 140" : "120, 120, 120"}
+          accentColor={isDark ? "160, 160, 160" : "100, 100, 100"}
+          lineOpacity={isDark ? 0.7 : 0.6}
+          animationSpeed={0.003}
+        />
+      </div>
 
-          {/* Navigation - Center */}
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link
-              to="/"
-              className={
-                isActive('/')
-                  ? 'text-foreground transition-colors hover:text-foreground/80'
-                  : 'text-foreground/60 transition-colors hover:text-foreground/80'
-              }
-            >
-              {t('Home')}
-            </Link>
-            <Link
-              to="/customers"
-              className={
-                isActive('/customers')
-                  ? 'text-foreground transition-colors hover:text-foreground/80'
-                  : 'text-foreground/60 transition-colors hover:text-foreground/80'
-              }
-            >
-              {t('Customers')}
-            </Link>
-            <Link
-              to="/add-customer"
-              className={
-                isActive('/add-customer')
-                  ? 'text-foreground transition-colors hover:text-foreground/80'
-                  : 'text-foreground/60 transition-colors hover:text-foreground/80'
-              }
-            >
-              {t('Add Customer')}
-            </Link>
-          </nav>
+      {/* Content */}
+      <div className="relative z-10">
+        <main className="container max-w-7xl mx-auto px-4 py-8">{children}</main>
+      </div>
 
-          {/* User info - Left side in RTL */}
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">{user?.email}</div>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              {t('Logout')}
-            </Button>
-          </div>
-        </div>
-      </header>
-      <main className="container max-w-7xl mx-auto px-4 py-8">{children}</main>
+      {/* Dock Navigation */}
+      <Dock
+        items={dockItems}
+        panelHeight={68}
+        baseItemSize={50}
+        magnification={70}
+      />
     </div>
   );
 };

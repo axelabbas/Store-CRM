@@ -159,7 +159,7 @@ export const AddCustomerPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl mx-auto">
       <Card>
         <CardHeader>
           <CardTitle>{t('Add New Customer')}</CardTitle>
@@ -177,9 +177,9 @@ export const AddCustomerPage: React.FC = () => {
             )}
 
             {successMessage && (
-              <div className="p-3 text-sm bg-green-50 border border-green-200 rounded-md flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span className="text-green-600">{successMessage}</span>
+              <div className="p-3 text-sm bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 dark:border-green-500/30 rounded-md flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <span className="text-green-600 dark:text-green-400">{successMessage}</span>
               </div>
             )}
 

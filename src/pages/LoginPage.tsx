@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { DynamicInput } from '@/components/ui/dynamic-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Moon, Sun } from 'lucide-react';
 import { handleError } from '../lib/errorHandling';
 import { t } from '../lib/translations';
+import SmoothWavyCanvas from '@/components/ui/smooth-wavy-canvas';
+import { useTheme } from '../hooks/useTheme';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +18,7 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +37,38 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {/* Theme Toggle Button */}
+      <div className="fixed top-4 right-4 z-20">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-10 w-10 bg-background/80 backdrop-blur"
+          title={isDark ? t('Switch to Light Mode') : t('Switch to Dark Mode')}
+        >
+          {isDark ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+
+      {/* Animated Background */}
+      <div className="fixed inset-0 z-0">
+        <SmoothWavyCanvas
+          backgroundColor={isDark ? "#0a0a0a" : "#ffffff"}
+          primaryColor={isDark ? "120, 120, 120" : "140, 140, 140"}
+          secondaryColor={isDark ? "140, 140, 140" : "120, 120, 120"}
+          accentColor={isDark ? "160, 160, 160" : "100, 100, 100"}
+          lineOpacity={isDark ? 0.7 : 0.6}
+          animationSpeed={0.003}
+        />
+      </div>
+
+      {/* Login Card */}
+      <Card className="w-full max-w-md relative z-10">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">{t('CRM Login')}</CardTitle>
           <CardDescription>
